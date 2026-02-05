@@ -88,10 +88,9 @@ novahd: ✅ 签到成功
 [小可爱签到机] 推送小纸条成功啦！返回码：200，内容：{"code":200,"message":"success","timestamp":1770272491}
 [小可爱签到机] 全部任务完成，准备打个盹，明天见！
 ```
-## bark收到的信息示例
+## 📋bark收到的信息示例
 
-![af5a96b47c83cbd8ef1792446657e7cb](https://github.com/user-attachments/assets/566c1174-15f1-41c5-a2bc-2e4553c6cd03)
-
+<img width="406" height="173" alt="image" src="https://github.com/user-attachments/assets/d89bffe8-4d5d-44bc-b752-5324b09e84c2" />
 
 ## ⚠️ 注意事项
 
