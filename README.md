@@ -4,6 +4,7 @@
 
 NovaHD PT站点地址：https://pt.novahd.top/
 
+<img width="684" height="225" alt="image" src="https://github.com/user-attachments/assets/e288fecf-9ed0-464d-9f3f-d0d965be07de" />
 
 
 ## 📦 部署流程
