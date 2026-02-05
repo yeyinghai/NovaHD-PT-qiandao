@@ -1,8 +1,9 @@
-
-
 # NovaHD PT 签到
 
 一个专为NovaHD PT 站点设计的自动化签到脚本，部署于青龙面板，具备趣味防护机制和多种推送方式。
+
+NovaHD PT站点地址：https://pt.novahd.top/
+
 
 
 ## 📦 部署流程
