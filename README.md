@@ -2,9 +2,17 @@
 
 一个专为NovaHD PT 站点设计的自动化签到脚本，部署于青龙面板，具备趣味防护机制和多种推送方式。
 
-NovaHD PT站点地址：https://pt.novahd.top/
+NovaHD PT站点地址：[https://pt.novahd.top/](https://pt.novahd.top/)
 
 <img width="684" height="225" alt="image" src="https://github.com/user-attachments/assets/e288fecf-9ed0-464d-9f3f-d0d965be07de" />
+
+# 更新
+
+## 26.02.08 新增hdarea.club网站的信息解析
+
+hdarea.club PT站点地址：[https://hdarea.club/](https://hdarea.club/)
+
+<img width="236" height="99" alt="image" src="https://github.com/user-attachments/assets/d53dba01-f08e-47b2-8f8e-c0e08c016fe3" />
 
 
 ## 📦 部署流程
@@ -33,7 +41,8 @@ npm install axios https-proxy-agent
 | 变量名 | 必填 | 说明 | 示例 |
 |--------|------|------|------|
 | `PT_WEBHOOK_URL` | ✅ | 推送地址 | `https://api.day.app/yourkey/` |
-| `PT_SITE_<大写站点>_CK` | ✅ | 站点 Cookie | `PT_SITE_HDKYL_CK=xxx` |
+| `PT_SITE_NOVAHD_CK` | ✅| NOVAHD站点 Cookie | `PT_SITE_NOVAHD_CK=xxx` |
+| `PT_SITE_HDAREA_CK` | ✅| HDArea 站点 Cookie | `PT_SITE_HDAREA_CK=xxx` |
 
 ### 推送配置示例
 ```bash
@@ -89,6 +98,9 @@ novahd: ✅ 签到成功
   🎁 获得奖励：10魔力值
 [小可爱签到机] 推送小纸条成功啦！返回码：200，内容：{"code":200,"message":"success","timestamp":1770272491}
 [小可爱签到机] 全部任务完成，准备打个盹，明天见！
+
+HDArea: ✅ 签到成功
+已连续签到1天
 ```
 ## 📋bark收到的信息示例
 
