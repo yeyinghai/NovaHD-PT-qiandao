@@ -1,6 +1,7 @@
 /**
  * PT 签到 Bark推送
  * 专门 NovaHD 信息解析和 Bark 推送
+ * 新增加hdarea.club信息解析
  */
 
 const axios = require('axios');
@@ -75,6 +76,93 @@ function randomHeaders(siteKey) {
     ...getExtraHeaders()
   };
   return headers;
+}
+
+// HDArea 签到信息解析
+function parseHDAreaAttendance(html) {
+  debug('==================== 开始解析 HDArea 签到详情 ====================');
+
+  let continuousDays = null;
+  let reward = null;
+  let totalSignCount = null;
+
+  // 移除HTML标签，获取纯文本用于分析
+  const plainText = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+
+  if (DEBUG) {
+    debug('========== 页面纯文本内容（前1000字符）==========');
+    debug(plainText.slice(0, 1000));
+    debug('===============================================');
+  }
+
+  // 1. 检测签到成功状态 - HDArea 方式
+  const hasSignSuccess = /\[已签到\]|signed.*today|attendance.*success/i.test(html);
+  debug(`签到成功状态检测: ${hasSignSuccess}`);
+
+  // 2. 提取连续签到天数 - 格式为 [已签到] (数字)
+  const continuousPatterns = [
+    // 标准格式：[已签到] (1)
+    /\[已签到\]\s*\((\d+)\)/i,
+    // 备选格式
+    /已签到.*?(\d+)\s*(?:天|day)/i,
+    // 纯括号内数字
+    /\(\s*(\d+)\s*\)(?=\s*$|<!--)/i,
+  ];
+
+  for (const pattern of continuousPatterns) {
+    const match = html.match(pattern);
+    if (match && match[1] && parseInt(match[1]) > 0) {
+      continuousDays = match[1];
+      debug(`✅ 匹配到连续签到天数: ${continuousDays}天 (模式: ${pattern})`);
+      break;
+    }
+  }
+
+  // 3. 提取奖励信息 - HDArea 可能没有详细奖励显示
+  // 但我们可以尝试找到与魔力值相关的信息
+  const rewardPatterns = [
+    /获得\s*(\d+)\s*(?:魔力值|积分|奖励)/i,
+    /\+\s*(\d+)\s*(?:魔力值|积分)/i,
+    /奖励.*?(\d+)/i,
+  ];
+
+  for (const pattern of rewardPatterns) {
+    const match = html.match(pattern);
+    if (match && match[1]) {
+      reward = `${match[1]}积分`;
+      debug(`✅ 匹配到奖励信息: ${reward} (模式: ${pattern})`);
+      break;
+    }
+  }
+
+  // 4. 提取总签到次数 - HDArea 通常不显示总次数
+  // 但如果有显示则尝试提取
+  const totalPatterns = [
+    /第\s*(\d+)\s*次签到/i,
+    /签到次数.*?(\d+)/i,
+  ];
+
+  for (const pattern of totalPatterns) {
+    const match = html.match(pattern);
+    if (match && match[1]) {
+      totalSignCount = match[1];
+      debug(`✅ 匹配到总签到次数: 第${totalSignCount}次 (模式: ${pattern})`);
+      break;
+    }
+  }
+
+  if (!continuousDays) debug('⚠️ 未匹配到连续签到天数');
+  if (!reward) debug('⚠️ 未匹配到奖励信息');
+  if (!totalSignCount) debug('⚠️ 未匹配到总签到次数');
+
+  debug('==================== HDArea 签到详情解析结束 ====================');
+
+  return {
+    continuousDays,
+    reward,
+    totalSignCount,
+    hasSignSuccess
+  };
 }
 
 // 增强的 NovaHD 签到信息解析
@@ -228,6 +316,11 @@ const sites = {
     host: 'pt.novahd.top',
     url: 'https://pt.novahd.top/attendance.php',
     parseReward: (html) => parseNovaHDAttendance(html)
+  },
+  hdarea: {
+    host: 'hdarea.club',
+    url: 'https://hdarea.club/index.php',
+    parseReward: (html) => parseHDAreaAttendance(html)
   }
 };
 
