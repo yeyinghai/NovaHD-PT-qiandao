@@ -10,9 +10,13 @@ NovaHD PT站点地址：[https://pt.novahd.top/](https://pt.novahd.top/)
 
 ## 26.02.08 新增hdarea.club网站的信息解析
 
-hdarea.club PT站点地址：[https://hdarea.club/](https://hdarea.club/)
+## 目前支持站点
 
-<img width="236" height="99" alt="image" src="https://github.com/user-attachments/assets/d53dba01-f08e-47b2-8f8e-c0e08c016fe3" />
+| 支持站点 | 图标 | 连接地址 | 
+|--------|------|------|
+| `NovaHD` | <img width="225" height="75" alt="image" src="https://github.com/user-attachments/assets/ebcfe7c9-0af0-4865-8461-77aec9364f13" /> | https://pt.novahd.top/ | 
+| `hdarea.club` | <img width="236" height="99" alt="image" src="https://github.com/user-attachments/assets/d53dba01-f08e-47b2-8f8e-c0e08c016fe3" /> | https://hdarea.club/ | 
+| `需要其他新增联系` | |  |
 
 
 ## 📦 部署流程
