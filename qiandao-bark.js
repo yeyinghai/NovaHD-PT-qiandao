@@ -1,7 +1,6 @@
 /**
  * PT 签到 Bark推送
  * 专门 NovaHD 信息解析和 Bark 推送
- * 新增加hdarea.club信息解析
  */
 
 const axios = require('axios');
@@ -96,12 +95,15 @@ function parseHDAreaAttendance(html) {
   }
 
   // 1. 检测签到成功状态 - HDArea 方式
-  const hasSignSuccess = /\[已签到\]|signed.*today|attendance.*success/i.test(html);
+  // sign_in.php 返回成功时会包含"已连续签到"或"获得了"相关文字
+  const hasSignSuccess = /已连续签到|获得了.*?魔力值|签到成功|签到完成/i.test(html);
   debug(`签到成功状态检测: ${hasSignSuccess}`);
 
-  // 2. 提取连续签到天数 - 格式为 [已签到] (数字)
+  // 2. 提取连续签到天数 - HDArea sign_in.php 返回格式："已连续签到X天"
   const continuousPatterns = [
-    // 标准格式：[已签到] (1)
+    // sign_in.php 返回格式：已连续签到1天
+    /已连续签到(\d+)天/i,
+    // 首页格式：[已签到] (1)
     /\[已签到\]\s*\((\d+)\)/i,
     // 备选格式
     /已签到.*?(\d+)\s*(?:天|day)/i,
@@ -118,9 +120,11 @@ function parseHDAreaAttendance(html) {
     }
   }
 
-  // 3. 提取奖励信息 - HDArea 可能没有详细奖励显示
-  // 但我们可以尝试找到与魔力值相关的信息
+  // 3. 提取奖励信息 - sign_in.php 返回格式："获得了X魔力值奖励"
   const rewardPatterns = [
+    // sign_in.php 返回格式：获得了11魔力值奖励
+    /获得了(\d+)魔力值/i,
+    // 首页格式
     /获得\s*(\d+)\s*(?:魔力值|积分|奖励)/i,
     /\+\s*(\d+)\s*(?:魔力值|积分)/i,
     /奖励.*?(\d+)/i,
@@ -129,7 +133,7 @@ function parseHDAreaAttendance(html) {
   for (const pattern of rewardPatterns) {
     const match = html.match(pattern);
     if (match && match[1]) {
-      reward = `${match[1]}积分`;
+      reward = `${match[1]}魔力值`;
       debug(`✅ 匹配到奖励信息: ${reward} (模式: ${pattern})`);
       break;
     }
@@ -319,7 +323,7 @@ const sites = {
   },
   hdarea: {
     host: 'hdarea.club',
-    url: 'https://hdarea.club/index.php',
+    url: 'https://hdarea.club/sign_in.php',
     parseReward: (html) => parseHDAreaAttendance(html)
   }
 };
