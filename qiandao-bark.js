@@ -92,23 +92,42 @@ function parseHDAreaAttendance(html) {
     debug('========== 页面纯文本内容（前1000字符）==========');
     debug(plainText.slice(0, 1000));
     debug('===============================================');
+    // 添加更多调试信息：输出包含签到相关关键词的部分
+    const signRelated = plainText.match(/.{0,100}(\[已签到\]|已连续|已经签到).{0,100}/gi);
+    if (signRelated) {
+      debug('找到签到相关内容片段:');
+      signRelated.forEach((text, idx) => {
+        debug(`  片段${idx + 1}: ${text}`);
+      });
+    } else {
+      debug('⚠️ 未找到签到相关关键词');
+    }
   }
 
-  // 1. 检测签到成功状态 - HDArea 方式
-  // sign_in.php 返回成功时会包含"已连续签到"或"获得了"相关文字
-  const hasSignSuccess = /已连续签到|获得了.*?魔力值|签到成功|签到完成/i.test(html);
+  // 检查响应是否来自 sign_in.php（签到接口响应）vs 首页
+  const isSignInResponse = /此次签到您获得了|已连续签到.*?天.*?获得了|签到成功|请不要重复签到/i.test(html) && !/HDArea.*?首页|css3menu/i.test(html);
+  const isIndexPage = /HDArea.*?首页|css3menu/i.test(html);
+
+  debug(`响应类型检测: isSignInResponse=${isSignInResponse}, isIndexPage=${isIndexPage}`);
+
+  // 1. 检测签到成功状态
+  const hasSignSuccess = /此次签到您获得了|已连续签到.*?天.*?获得了|请不要重复签到/i.test(html);
   debug(`签到成功状态检测: ${hasSignSuccess}`);
 
-  // 2. 提取连续签到天数 - HDArea sign_in.php 返回格式："已连续签到X天"
+  // 2. 检测是否是重复签到错误
+  const isAlreadySignedToday = /请不要重复签到/i.test(html);
+  if (isAlreadySignedToday) {
+    debug(`✅ 检测到重复签到提示，说明今天已经签过到了`);
+  }
+
+  // 3. 提取连续签到天数 - 尝试多种方式
   const continuousPatterns = [
     // sign_in.php 返回格式：已连续签到1天
     /已连续签到(\d+)天/i,
     // 首页格式：[已签到] (1)
     /\[已签到\]\s*\((\d+)\)/i,
-    // 备选格式
-    /已签到.*?(\d+)\s*(?:天|day)/i,
-    // 纯括号内数字
-    /\(\s*(\d+)\s*\)(?=\s*$|<!--)/i,
+    // 首页纯文本格式（HTML标签已去）：已签到 (1)
+    /已签到\s*\((\d+)\)/i,
   ];
 
   for (const pattern of continuousPatterns) {
@@ -120,14 +139,19 @@ function parseHDAreaAttendance(html) {
     }
   }
 
-  // 3. 提取奖励信息 - sign_in.php 返回格式："获得了X魔力值奖励"
+  // 如果还是未找到，尝试从纯文本中搜索
+  if (!continuousDays) {
+    const textMatch = plainText.match(/\((\d+)\)(?=\s|$)/);
+    if (textMatch && textMatch[1] && parseInt(textMatch[1]) > 0 && isIndexPage) {
+      continuousDays = textMatch[1];
+      debug(`✅ 从纯文本匹配到连续签到天数: ${continuousDays}天`);
+    }
+  }
+
+  // 4. 提取奖励信息
   const rewardPatterns = [
-    // sign_in.php 返回格式：获得了11魔力值奖励
     /获得了(\d+)魔力值/i,
-    // 首页格式
-    /获得\s*(\d+)\s*(?:魔力值|积分|奖励)/i,
-    /\+\s*(\d+)\s*(?:魔力值|积分)/i,
-    /奖励.*?(\d+)/i,
+    /此次签到您获得了(\d+)魔力值/i,
   ];
 
   for (const pattern of rewardPatterns) {
@@ -139,8 +163,7 @@ function parseHDAreaAttendance(html) {
     }
   }
 
-  // 4. 提取总签到次数 - HDArea 通常不显示总次数
-  // 但如果有显示则尝试提取
+  // 5. 提取总签到次数
   const totalPatterns = [
     /第\s*(\d+)\s*次签到/i,
     /签到次数.*?(\d+)/i,
@@ -156,7 +179,7 @@ function parseHDAreaAttendance(html) {
   }
 
   if (!continuousDays) debug('⚠️ 未匹配到连续签到天数');
-  if (!reward) debug('⚠️ 未匹配到奖励信息');
+  if (!reward && !isAlreadySignedToday) debug('⚠️ 未匹配到奖励信息');
   if (!totalSignCount) debug('⚠️ 未匹配到总签到次数');
 
   debug('==================== HDArea 签到详情解析结束 ====================');
@@ -165,7 +188,9 @@ function parseHDAreaAttendance(html) {
     continuousDays,
     reward,
     totalSignCount,
-    hasSignSuccess
+    hasSignSuccess,
+    isSignInResponse,
+    isAlreadySignedToday
   };
 }
 
@@ -323,7 +348,8 @@ const sites = {
   },
   hdarea: {
     host: 'hdarea.club',
-    url: 'https://hdarea.club/sign_in.php',
+    url: 'https://hdarea.club/index.php',  // GET 首页来获取签到状态
+    signUrl: 'https://hdarea.club/sign_in.php',  // POST 到这里来签到
     parseReward: (html) => parseHDAreaAttendance(html)
   }
 };
@@ -421,7 +447,7 @@ async function sign(siteKey) {
 
       // 解析页面信息
       const rewardInfo = site.parseReward ? site.parseReward(html) : {};
-      const { continuousDays, reward, totalSignCount, hasSignSuccess } = rewardInfo;
+      const { continuousDays, reward, totalSignCount, hasSignSuccess, isSignInResponse } = rewardInfo;
 
       // 检查是否已经签到
       const alreadySignedPatterns = [
@@ -439,7 +465,11 @@ async function sign(siteKey) {
 
       const isAlreadySigned = alreadySignedPatterns.some(pattern => pattern.test(html));
 
-      if (isAlreadySigned || hasSignSuccess) {
+      // 对于 HDArea，如果获取到的是首页而不是签到接口响应，应该跳过这个检查，继续 POST 签到
+      // 只有当确实是签到接口的响应，或者是其他站点时，才检查已签到状态
+      const shouldCheckAlreadySigned = !siteKey.includes('hdarea') || isSignInResponse;
+
+      if ((shouldCheckAlreadySigned && (isAlreadySigned || hasSignSuccess)) || (isSignInResponse && hasSignSuccess)) {
         log(`今天已经打过卡啦，摸摸头~`);
 
         // 构建详细的签到信息
@@ -475,14 +505,14 @@ async function sign(siteKey) {
       // 尝试签到
       debug('页面未显示已签到，尝试执行签到操作...');
 
-      const postData = 'action=attendance';
+      const postData = 'action=sign_in';
       const postHeaders = {
         ...headers,
         'content-type': 'application/x-www-form-urlencoded',
         'content-length': postData.length.toString()
       };
 
-      const { status: st2, data: d2 } = await http.post(site.url, postData, { headers: postHeaders });
+      const { status: st2, data: d2 } = await http.post(site.signUrl || site.url, postData, { headers: postHeaders });
 
       if (DEBUG) {
         debug('POST 响应长度: ' + d2.length + ' 字符');
@@ -492,7 +522,7 @@ async function sign(siteKey) {
 
       // 解析 POST 响应
       const postRewardInfo = site.parseReward ? site.parseReward(d2) : {};
-      const postSuccess = postRewardInfo.hasSignSuccess;
+      const postSuccess = postRewardInfo.hasSignSuccess || postRewardInfo.isAlreadySignedToday;
 
       if (postSuccess || st2 === 302) {
         log('签到 POST 请求成功！');
